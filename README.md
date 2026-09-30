@@ -12,28 +12,50 @@
 
 ---
 
-# Run PAINSENSE-AI
+# QUICK START — WINDOWS WITHOUT DOCKER
 
-## Option 1 — Docker (Recommended)
+1. Open terminal in PAINSENSE-AI root:
+   ```powershell
+   cd "C:\Users\K SHREYAS BHAT\OneDrive\Desktop\Painsense-AI"
+   ```
+2. Run:
+   ```bash
+   npm run dev
+   ```
+3. Open:
+   ```text
+   http://localhost:3000
+   ```
 
+*(This single command automatically starts the FastAPI backend, starts the React/Vite frontend on port 3000, connects them via reverse proxy `/api`, initializes the SQLite database with clinical demo records, and provides graceful cleanup on Ctrl+C.)*
+
+---
+
+# Additional Commands
+
+### Preflight Health & Diagnostics
+```bash
+npm run doctor
+```
+
+### Run All Tests (Pytest + ML + Build)
+```bash
+npm test
+```
+
+### Production Build
+```bash
+npm run build
+```
+
+### Local Database Reset
+```bash
+npm run reset
+```
+
+### Optional: Docker Deployment (if Docker is available)
 ```bash
 docker compose up --build
-```
-
-Open:
-```text
-http://localhost:3000
-```
-
-## Option 2 — Development (Local One-Command)
-
-```bash
-npm run dev
-```
-
-Open:
-```text
-http://localhost:3000
 ```
 
 ### Preflight Health & Subsystem Inspection
