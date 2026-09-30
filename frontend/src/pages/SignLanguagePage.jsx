@@ -12,6 +12,12 @@ export default function SignLanguagePage() {
   const [cameraActive, setCameraActive] = useState(false);
   const [ttsEnabled, setTtsEnabled] = useState(true);
   const [vocabulary, setVocabulary] = useState({});
+  const [dialect, setDialect] = useState('asl'); // 'asl' or 'isl'
+  const [dialectDetails, setDialectDetails] = useState({
+    name: 'American Sign Language',
+    region: 'North America',
+    cultural_context: 'Topic-Comment syntax with two-handed symmetry and specific non-manual facial markers.'
+  });
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [correctedPhrase, setCorrectedPhrase] = useState('');
   const [feedbackSent, setFeedbackSent] = useState(false);
@@ -22,16 +28,23 @@ export default function SignLanguagePage() {
   useEffect(() => {
     async function loadVocab() {
       try {
-        const data = await getSignVocabulary();
+        const data = await getSignVocabulary(dialect);
         if (data && data.vocabulary) {
           setVocabulary(data.vocabulary);
+          if (data.language_name) {
+            setDialectDetails({
+              name: data.language_name,
+              region: data.region,
+              cultural_context: data.cultural_context
+            });
+          }
         }
       } catch (err) {
         console.error("Vocabulary fetch failed:", err);
       }
     }
     loadVocab();
-  }, []);
+  }, [dialect]);
 
   const startCamera = async () => {
     try {
@@ -61,6 +74,13 @@ export default function SignLanguagePage() {
     return () => stopCamera();
   }, []);
 
+  const handleDialectChange = (newDialect) => {
+    if (newDialect === dialect) return;
+    setDialect(newDialect);
+    setSelectedSigns([]);
+    setRecognitionResult(null);
+  };
+
   const addSign = (signKey) => {
     const nextSigns = [...selectedSigns, signKey];
     setSelectedSigns(nextSigns);
@@ -87,7 +107,7 @@ export default function SignLanguagePage() {
   const runRecognition = async (signsToTranslate) => {
     if (!signsToTranslate || signsToTranslate.length === 0) return;
     try {
-      const res = await analyzeSignSequence(signsToTranslate);
+      const res = await analyzeSignSequence(signsToTranslate, [], dialect);
       setRecognitionResult(res);
       setCorrectedPhrase(res.translated_phrase);
       setFeedbackSent(false);
@@ -131,11 +151,35 @@ export default function SignLanguagePage() {
             Sign Language Communication
           </h1>
           <p className="text-slate-600 text-sm mt-1 max-w-3xl">
-            Initial dialect: American Sign Language (ASL) Healthcare Distress Vocabulary. Sequence assembler translates gestural strings into natural medical statements.
+            Currently active: <span className="font-semibold text-slate-800">{dialectDetails.name}</span> ({dialectDetails.region}). Sequence assembler translates gestural strings into natural medical statements without conflating regional dialects.
           </p>
         </div>
 
-        <div className="flex items-center space-x-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Dialect Switcher */}
+          <div className="inline-flex rounded-lg border border-slate-200 bg-slate-100 p-0.5">
+            <button
+              onClick={() => handleDialectChange('asl')}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
+                dialect === 'asl'
+                  ? 'bg-white text-emerald-700 shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              ASL (North America)
+            </button>
+            <button
+              onClick={() => handleDialectChange('isl')}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
+                dialect === 'isl'
+                  ? 'bg-white text-emerald-700 shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              ISL (India & South Asia)
+            </button>
+          </div>
+
           <button
             onClick={() => setTtsEnabled(!ttsEnabled)}
             className={`px-3 py-1.5 rounded-lg border text-xs font-semibold flex items-center space-x-1.5 transition-all ${
@@ -148,11 +192,28 @@ export default function SignLanguagePage() {
         </div>
       </div>
 
-      {/* Limitation Notice */}
-      <div className="p-3.5 bg-slate-100 border border-slate-200 rounded-xl text-xs text-slate-600 flex items-start space-x-2.5">
-        <ShieldAlert className="w-4 h-4 text-slate-500 flex-shrink-0 mt-0.5" />
-        <div>
-          <span className="font-semibold text-slate-800">Dialect & Linguistic Transparency:</span> Sign language is not universal. This module currently targets core ASL healthcare and emergency concepts. Regional variations and non-manual markers may affect recognition.
+      {/* Sensor & Dialect Notice Banner */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="p-3.5 bg-slate-100 border border-slate-200 rounded-xl text-xs text-slate-600 flex items-start space-x-2.5">
+          <ShieldAlert className="w-4 h-4 text-slate-500 flex-shrink-0 mt-0.5" />
+          <div>
+            <span className="font-semibold text-slate-800">Linguistic Grammar Note:</span> {dialectDetails.cultural_context}
+          </div>
+        </div>
+
+        <div className="p-3.5 bg-white border border-slate-200 rounded-xl text-xs flex items-center justify-between">
+          <span className="font-medium text-slate-700">Sensor Tracking Status:</span>
+          {cameraActive ? (
+            <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 font-semibold flex items-center gap-1.5 border border-emerald-200">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              MediaPipe Hand Mesh (21-Joint) Active
+            </span>
+          ) : (
+            <span className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 font-medium flex items-center gap-1.5 border border-slate-200">
+              <span className="w-2 h-2 rounded-full bg-slate-400"></span>
+              Sensor Standby (Interactive Touch / Manual Mode)
+            </span>
+          )}
         </div>
       </div>
 

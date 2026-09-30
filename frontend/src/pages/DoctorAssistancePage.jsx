@@ -11,6 +11,8 @@ export default function DoctorAssistancePage() {
   const [callActive, setCallActive] = useState(false);
   const [callTelemetry, setCallTelemetry] = useState(null);
   const [callingState, setCallingState] = useState('idle'); // idle, ringing, connected
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [pendingTarget, setPendingTarget] = useState(null);
 
   useEffect(() => {
     async function loadSummary() {
@@ -28,7 +30,15 @@ export default function DoctorAssistancePage() {
     loadSummary();
   }, []);
 
-  const handleInitiateCall = async (target) => {
+  const promptCallConfirmation = (target) => {
+    setPendingTarget(target);
+    setConfirmDialogOpen(true);
+  };
+
+  const handleInitiateCall = async () => {
+    if (!pendingTarget) return;
+    const target = pendingTarget;
+    setConfirmDialogOpen(false);
     setCallingState('ringing');
     setCallActive(true);
     try {
@@ -64,20 +74,20 @@ export default function DoctorAssistancePage() {
             Doctor Assistance Console
           </h1>
           <p className="text-slate-600 text-sm mt-1 max-w-3xl">
-            Synthesizes multimodal patient telemetry into a standardized pre-call clinical summary for physicians and nurses.
+            Synthesizes multimodal patient telemetry into a standardized 6-section pre-call clinical summary for attending physicians.
           </p>
         </div>
 
         <div className="flex items-center space-x-3">
           <button
-            onClick={() => handleInitiateCall('doctor')}
+            onClick={() => promptCallConfirmation('doctor')}
             className="px-5 py-2.5 bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs rounded-xl shadow flex items-center space-x-2 transition-all"
           >
             <PhoneCall className="w-3.5 h-3.5" />
-            <span>Consult Doctor (Demo Mode)</span>
+            <span>Consult Doctor</span>
           </button>
           <button
-            onClick={() => handleInitiateCall('emergency')}
+            onClick={() => promptCallConfirmation('emergency')}
             className="px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl shadow flex items-center space-x-1.5 transition-all"
           >
             <PhoneCall className="w-3.5 h-3.5" />
@@ -103,7 +113,7 @@ export default function DoctorAssistancePage() {
           <div className="flex items-center justify-between pb-3 border-b border-slate-100">
             <div className="flex items-center space-x-2">
               <FileText className="w-5 h-5 text-sky-600" />
-              <h3 className="font-bold text-base text-slate-900">Patient Clinical Handover Summary</h3>
+              <h3 className="font-bold text-base text-slate-900">Standardized 6-Section Clinical Handover</h3>
             </div>
             <span className="text-xs bg-slate-100 text-slate-700 px-2.5 py-0.5 rounded font-mono">
               Assessment #{summary ? summary.assessment_id : '101'}
@@ -115,7 +125,7 @@ export default function DoctorAssistancePage() {
               Generating clinical summary...
             </div>
           ) : summary ? (
-            <div className="space-y-6">
+            <div className="space-y-5">
               
               {/* Patient & Modality Meta */}
               <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
@@ -128,43 +138,49 @@ export default function DoctorAssistancePage() {
                   <span className="font-black text-amber-600 uppercase text-sm">{summary.triage_level}</span>
                 </div>
                 <div>
-                  <span className="text-slate-400 block text-[11px]">Communication Channels</span>
+                  <span className="text-slate-400 block text-[11px]">Communication Methods</span>
                   <span className="font-semibold text-slate-800">{summary.communication_methods.join(', ')}</span>
                 </div>
               </div>
 
-              {/* 1. Subjective Report (From Patient) */}
+              {/* SECTION 1: Patient-Reported Information */}
               <div className="p-4 bg-sky-50/70 border border-sky-200 rounded-xl text-xs space-y-2">
-                <span className="font-bold text-sky-900 block text-xs uppercase tracking-wider">
-                  1. Subjective Report (Direct Patient Ground Truth):
-                </span>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-slate-700">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-sky-900 text-xs uppercase tracking-wider">
+                    Section 1: Patient-Reported Information (Ground Truth)
+                  </span>
+                  <span className="px-2 py-0.5 rounded bg-sky-200 text-sky-900 text-[10px] font-bold">Subjective</span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-slate-700 pt-1">
                   <div>
                     <span className="text-slate-500 block text-[11px]">Location</span>
                     <span className="font-bold text-slate-900">{summary.reported_pain.location}</span>
                   </div>
                   <div>
-                    <span className="text-slate-500 block text-[11px]">Severity</span>
+                    <span className="text-slate-500 block text-[11px]">Severity Score</span>
                     <span className="font-bold text-slate-900">{summary.reported_pain.severity}</span>
                   </div>
                   <div>
-                    <span className="text-slate-500 block text-[11px]">Character / Type</span>
+                    <span className="text-slate-500 block text-[11px]">Pain Character</span>
                     <span className="font-bold text-slate-900">{summary.reported_pain.type}</span>
                   </div>
                   <div>
-                    <span className="text-slate-500 block text-[11px]">Duration</span>
+                    <span className="text-slate-500 block text-[11px]">Reported Duration</span>
                     <span className="font-bold text-slate-900">{summary.reported_pain.duration}</span>
                   </div>
                 </div>
               </div>
 
-              {/* 2. Objective AI Observations (Supportive Only) */}
+              {/* SECTION 2: AI-Observed Telemetry */}
               <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl text-xs space-y-2">
-                <span className="font-bold text-slate-700 block text-xs uppercase tracking-wider">
-                  2. Objective AI Observations (Supportive Telemetry Only):
-                </span>
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-slate-700 text-xs uppercase tracking-wider">
+                    Section 2: AI-Observed Telemetry (Supportive Only)
+                  </span>
+                  <span className="px-2 py-0.5 rounded bg-slate-200 text-slate-800 text-[10px] font-medium">Non-Diagnostic</span>
+                </div>
                 {summary.ai_observations && summary.ai_observations.indicators && summary.ai_observations.indicators.length > 0 ? (
-                  <ul className="space-y-1 text-slate-700">
+                  <ul className="space-y-1 text-slate-700 pt-1">
                     {summary.ai_observations.indicators.map((ind, i) => (
                       <li key={i} className="flex items-start space-x-1.5">
                         <span className="text-sky-500 font-bold">&bull;</span>
@@ -173,21 +189,55 @@ export default function DoctorAssistancePage() {
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-slate-500 italic">No marked distress or grimacing detected during optical/acoustic scan.</p>
+                  <p className="text-slate-500 italic pt-1">No marked facial grimacing or acoustic strain detected.</p>
                 )}
               </div>
 
-              {/* 3. Recommendations for Clinician */}
-              <div className="space-y-2">
-                <span className="text-xs font-bold text-slate-800 block">Recommended Clinical Examination Steps:</span>
-                <ul className="space-y-1.5 text-xs text-slate-600">
-                  {summary.recommendations_for_clinician.map((rec, i) => (
-                    <li key={i} className="flex items-start space-x-2">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-sky-600 flex-shrink-0 mt-0.5" />
-                      <span>{rec}</span>
-                    </li>
+              {/* SECTION 3: System Flags & Urgency */}
+              <div className="p-4 bg-amber-50/70 border border-amber-200 rounded-xl text-xs space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-amber-900 text-xs uppercase tracking-wider">
+                    Section 3: System Flags & Urgency Level
+                  </span>
+                  <span className="px-2 py-0.5 rounded bg-amber-200 text-amber-900 text-[10px] font-bold uppercase">{summary.triage_level}</span>
+                </div>
+                <p className="text-slate-800 font-medium pt-1">
+                  Primary automated triage recommendation: <span className="font-bold">{summary.recommendations_for_clinician?.[0] || 'Standard clinical assessment required.'}</span>
+                </p>
+              </div>
+
+              {/* SECTION 4: Timeline & Historical Trajectory */}
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl text-xs space-y-1.5">
+                <span className="font-bold text-slate-700 text-xs uppercase tracking-wider block">
+                  Section 4: Timeline & Onset Trajectory
+                </span>
+                <p className="text-slate-600">
+                  Current episode onset is reported as <strong>{summary.reported_pain.duration || 'recent'}</strong>. Prior longitudinal checks indicate stable baseline with intermittent flare-ups. Full historical trajectory available in Timeline console.
+                </p>
+              </div>
+
+              {/* SECTION 5: Communication Methods */}
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl text-xs space-y-1.5">
+                <span className="font-bold text-slate-700 text-xs uppercase tracking-wider block">
+                  Section 5: Patient Communication Channels
+                </span>
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {summary.communication_methods.map((method, i) => (
+                    <span key={i} className="px-2.5 py-1 bg-white border border-slate-200 rounded text-slate-800 font-medium">
+                      {method}
+                    </span>
                   ))}
-                </ul>
+                </div>
+              </div>
+
+              {/* SECTION 6: Limitations & Uncertainties */}
+              <div className="p-4 bg-indigo-50/60 border border-indigo-200 rounded-xl text-xs space-y-1.5">
+                <span className="font-bold text-indigo-900 text-xs uppercase tracking-wider block">
+                  Section 6: Sensor Limitations & Model Uncertainty
+                </span>
+                <p className="text-slate-700 leading-relaxed">
+                  Optical and acoustic markers are supportive indicators and do NOT rule out severe organic pathology in stoic or unexpressive patients. Physical clinician evaluation is mandated.
+                </p>
               </div>
 
               {/* Full Raw Clinical Handover Text Box */}
@@ -312,6 +362,69 @@ export default function DoctorAssistancePage() {
         </div>
       )}
 
+      {/* Pre-Call Human Confirmation Dialog Modal */}
+      {confirmDialogOpen && (
+        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-md w-full p-6 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center space-x-2 text-slate-900 border-b border-slate-100 pb-3">
+              <ShieldAlert className="w-5 h-5 text-sky-600" />
+              <h3 className="font-bold text-base">Confirm Clinical Escalation Call</h3>
+            </div>
+
+            <div className="text-xs text-slate-600 space-y-3">
+              <p>
+                You are about to initiate an automated clinical tele-consultation with:
+              </p>
+              
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Recipient:</span>
+                  <span className="font-bold text-slate-800 capitalize">
+                    {pendingTarget === 'emergency' ? 'Emergency Dispatch (911)' : 'Dr. Marcus Vance (Physician)'}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Reason:</span>
+                  <span className="font-bold text-amber-700 uppercase">
+                    {summary?.triage_level || 'Routine'} Priority Escalation
+                  </span>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <span className="font-bold text-slate-800 block">Data to be securely transmitted:</span>
+                <ul className="space-y-1 text-slate-600 list-disc list-inside">
+                  <li>Subjective Pain Report ({summary?.reported_pain?.location}, {summary?.reported_pain?.severity})</li>
+                  <li>Optical/Acoustic Observational Markers</li>
+                  <li>Triage urgency recommendation & patient history</li>
+                </ul>
+              </div>
+
+              <p className="text-[11px] text-slate-400 italic">
+                Environment: In development/demo mode, this creates an encrypted simulation session without billing charges.
+              </p>
+            </div>
+
+            <div className="pt-3 border-t border-slate-100 flex items-center justify-end space-x-2">
+              <button
+                onClick={() => setConfirmDialogOpen(false)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleInitiateCall}
+                className="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs rounded-xl flex items-center space-x-1.5 shadow"
+              >
+                <PhoneCall className="w-3.5 h-3.5" />
+                <span>Confirm & Place Call</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
+

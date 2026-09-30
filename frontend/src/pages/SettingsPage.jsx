@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Settings, Lock, Eye, Trash2, CheckCircle2, ShieldCheck, AlertCircle } from 'lucide-react';
-import { getPrivacyConsent, updatePrivacyConsent, deleteUserData } from '../services/api';
+import { getPrivacyConsent, updatePrivacyConsent, deleteUserData, exportUserData } from '../services/api';
 
 export default function SettingsPage({ highContrast, setHighContrast }) {
   const [consent, setConsent] = useState({
@@ -166,6 +166,40 @@ export default function SettingsPage({ highContrast, setHighContrast }) {
         </button>
       </div>
 
+      {/* Data Sovereignty & Portability (Export My Data) */}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
+        <h3 className="font-bold text-base text-slate-900 pb-3 border-b border-slate-100 flex items-center space-x-2">
+          <ShieldCheck className="w-5 h-5 text-emerald-600" />
+          <span>Patient Data Portability (GDPR Art. 20 / HIPAA)</span>
+        </h3>
+
+        <p className="text-xs text-slate-600 leading-relaxed">
+          Download a complete, machine-readable JSON archive of all your stored pain evaluations, sensory observations, consent records, and historical timeline logs.
+        </p>
+
+        <button
+          onClick={async () => {
+            try {
+              const data = await exportUserData();
+              const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = `painsense-patient-archive-${new Date().toISOString().split('T')[0]}.json`;
+              a.click();
+              URL.revokeObjectURL(url);
+            } catch (err) {
+              console.error("Export error:", err);
+              alert("Failed to export patient data archive.");
+            }
+          }}
+          className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow transition-colors flex items-center space-x-2"
+        >
+          <ShieldCheck className="w-4 h-4" />
+          <span>Download Complete Data Archive (JSON)</span>
+        </button>
+      </div>
+
       {/* Data Erasure / Right to be Forgotten */}
       <div className="bg-white rounded-2xl border border-red-200 shadow-sm p-6 space-y-4">
         <h3 className="font-bold text-base text-red-900 pb-3 border-b border-red-100 flex items-center space-x-2">
@@ -185,6 +219,7 @@ export default function SettingsPage({ highContrast, setHighContrast }) {
           <span>Permanently Delete All My Data</span>
         </button>
       </div>
+
 
     </div>
   );

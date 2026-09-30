@@ -190,3 +190,19 @@ class ConsentRecord(Base):
     updated_at = Column(DateTime, default=datetime.datetime.utcnow)
 
     user = relationship("User", back_populates="consent")
+
+class SafetyAuditRecord(Base):
+    """Audit log of safety rule triggers, emergency escalations, and system recommendations."""
+    __tablename__ = "safety_audit_records"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    assessment_id = Column(Integer, ForeignKey("assessments.id"), nullable=True)
+    severity = Column(String(50), default="routine")  # routine, caution, urgent, emergency
+    confidence = Column(Float, default=1.0)
+    triggered_rules_json = Column(Text, default="[]")
+    matched_text = Column(Text, nullable=True)
+    recommended_action = Column(String(255), nullable=False)
+    action_taken = Column(String(100), default="logged")  # logged, user_notified, doctor_escalated
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+

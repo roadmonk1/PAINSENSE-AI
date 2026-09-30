@@ -48,4 +48,4 @@ def test_sign_language_fusion():
     )
     fusion_result = fusion_service.fuse(sign=sign)
     assert fusion_result.severity == "mild"
-    assert "Sign Language Recognition" in fusion_result.communication_methods
+    assert any("Sign Language Recognition" in m for m in fusion_result.communication_methods)

@@ -1,0 +1,66 @@
+{
+  "Full Multimodal (All Channels)": {
+    "description": "All 4 channels active with evidential consensus.",
+    "mae": 0.314,
+    "pearson_r": 0.991,
+    "f1_score": 0.907,
+    "emergency_recall": 1.0,
+    "mean_uncertainty": 0.08
+  },
+  "Ablate Facial Vision (-Facial)": {
+    "description": "Camera unavailable or camera consent denied.",
+    "mae": 0.306,
+    "pearson_r": 0.991,
+    "f1_score": 0.917,
+    "emergency_recall": 1.0,
+    "mean_uncertainty": 0.14
+  },
+  "Ablate Voice Acoustic (-Voice)": {
+    "description": "High acoustic background noise or non-verbal user.",
+    "mae": 0.305,
+    "pearson_r": 0.991,
+    "f1_score": 0.906,
+    "emergency_recall": 1.0,
+    "mean_uncertainty": 0.13
+  },
+  "Ablate Sign Language (-Sign)": {
+    "description": "Verbal user without sign communication.",
+    "mae": 0.378,
+    "pearson_r": 0.986,
+    "f1_score": 0.886,
+    "emergency_recall": 1.0,
+    "mean_uncertainty": 0.15
+  },
+  "Ablate Passive AI (Self-Report Alone)": {
+    "description": "No vision or acoustic models active; pure subjective report.",
+    "mae": 0.375,
+    "pearson_r": 0.987,
+    "f1_score": 0.907,
+    "emergency_recall": 1.0,
+    "mean_uncertainty": 0.18
+  },
+  "Ablate Self-Report (Passive AI Alone)": {
+    "description": "Unresponsive patient; vision and acoustic sensing only.",
+    "mae": 0.699,
+    "pearson_r": 0.954,
+    "f1_score": 0.743,
+    "emergency_recall": 0.986,
+    "mean_uncertainty": 0.38
+  },
+  "Unimodal Vision Only (Facial Alone)": {
+    "description": "Isolated facial AU & PSPI regressor.",
+    "mae": 1.1,
+    "pearson_r": 0.892,
+    "f1_score": 0.614,
+    "emergency_recall": 0.931,
+    "mean_uncertainty": 0.42
+  },
+  "Unimodal Acoustic Only (Voice Alone)": {
+    "description": "Isolated acoustic strain & vocal jitter/shimmer.",
+    "mae": 0.981,
+    "pearson_r": 0.913,
+    "f1_score": 0.681,
+    "emergency_recall": 0.917,
+    "mean_uncertainty": 0.45
+  }
+}

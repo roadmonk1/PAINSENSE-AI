@@ -1,66 +1,76 @@
-"""Sign language gesture sequence model and hand landmark geometry analyzer."""
-from typing import List, Dict, Any, Tuple
-import math
+"""
+PAINSENSE-AI Sequence Model & Phrase Assembler
+Translates temporal sign sequences into natural clinical phrases
+using selected SignLanguageProfile (ASL / ISL).
+"""
 
-class SignLandmarkAnalyzer:
-    """
-    Computes key joint angles and normalized tip-to-palm distance vectors
-    for 21 standard hand landmarks (MediaPipe Hands format).
-    """
-
-    @staticmethod
-    def euclidean_distance(p1: Dict[str, float], p2: Dict[str, float]) -> float:
-        return math.sqrt((p1.get("x", 0) - p2.get("x", 0))**2 +
-                         (p1.get("y", 0) - p2.get("y", 0))**2 +
-                         (p1.get("z", 0) - p2.get("z", 0))**2)
-
-    @classmethod
-    def extract_finger_states(cls, landmarks: List[Dict[str, float]]) -> Dict[str, bool]:
-        """Returns whether each finger (thumb, index, middle, ring, pinky) is extended."""
-        if len(landmarks) < 21:
-            return {"thumb": False, "index": False, "middle": False, "ring": False, "pinky": False}
-
-        wrist = landmarks[0]
-        # Compare tip distance to PIP joint distance from wrist
-        tips = [4, 8, 12, 16, 20]
-        pips = [2, 6, 10, 14, 18]
-        names = ["thumb", "index", "middle", "ring", "pinky"]
-
-        extended = {}
-        for name, tip_idx, pip_idx in zip(names, tips, pips):
-            d_tip = cls.euclidean_distance(landmarks[tip_idx], wrist)
-            d_pip = cls.euclidean_distance(landmarks[pip_idx], wrist)
-            extended[name] = d_tip > d_pip * 1.15
-
-        return extended
+from typing import List, Dict, Any, Optional
+from ml.sign_language.profiles import get_profile, SignLanguageProfile
+from ml.sign_language.temporal_buffer import TemporalGestureBuffer
 
 class SignSequenceAssembler:
-    """Assembles temporal tokens into structured medical intent."""
+    """Assembles temporal sign tokens into natural language statements using dialect profiles."""
 
     @staticmethod
-    def assemble(tokens: List[str]) -> Dict[str, Any]:
+    def assemble_phrase(
+        tokens: List[str],
+        language_code: str = "asl",
+        confidence_scores: Optional[List[float]] = None
+    ) -> Dict[str, Any]:
+        profile = get_profile(language_code)
         normalized = [t.lower().strip() for t in tokens if t.strip()]
+
         if not normalized:
-            return {"phrase": "No active gesture", "intent": "neutral"}
-
-        if "pain" in normalized:
-            loc = next((t for t in normalized if t in ["chest", "head", "stomach", "back", "arm", "leg"]), "unspecified region")
-            sev = next((t for t in normalized if t in ["severe", "mild"]), "moderate")
             return {
-                "phrase": f"{sev.capitalize()} {loc} pain",
-                "intent": "pain_report",
-                "urgency": "high" if sev == "severe" or loc == "chest" else "routine"
+                "language_code": profile.language_code,
+                "language_name": profile.language_name,
+                "recognized_signs": [],
+                "confidence": 0.0,
+                "translated_phrase": "No active gesture",
+                "two_way_response_text": "Please sign or select a concept to communicate.",
+                "two_way_response_speech": "Please sign or select a concept to communicate.",
+                "action_hint": "none"
             }
 
-        if "help" in normalized and "emergency" in normalized:
-            return {
-                "phrase": "Emergency assistance requested immediately",
-                "intent": "emergency_call",
-                "urgency": "critical"
-            }
+        avg_conf = round(sum(confidence_scores) / len(confidence_scores), 2) if confidence_scores else 0.88
+        sign_set = set(normalized)
+        matched_phrase = None
+        action_hint = "routine"
+
+        # Check matched phrase patterns defined specifically for this language profile
+        for pattern_set, template, hint in profile.phrase_patterns:
+            if pattern_set.issubset(sign_set):
+                matched_phrase = template
+                action_hint = hint
+                break
+
+        # Fallback compositional syntax respecting profile vocabulary
+        if not matched_phrase:
+            parts = []
+            for t in normalized:
+                defn = profile.vocabulary.get(t)
+                if defn:
+                    parts.append(defn.concept)
+                else:
+                    parts.append(t.capitalize())
+            matched_phrase = " + ".join(parts)
+
+        # Formulate two-way accessible text and audio prompt
+        if action_hint == "emergency" or "chest" in normalized and "severe" in normalized:
+            response_text = f"{matched_phrase} recorded. This may be urgent. Would you like us to contact emergency services or your doctor?"
+        elif action_hint == "call_doctor" or "pain" in normalized:
+            response_text = f"{matched_phrase} recorded. Would you like to consult a healthcare professional or contact your caregiver?"
+        else:
+            response_text = f"{matched_phrase} recorded."
 
         return {
-            "phrase": " ".join([t.capitalize() for t in normalized]),
-            "intent": "general_communication",
-            "urgency": "routine"
+            "language_code": profile.language_code,
+            "language_name": profile.language_name,
+            "region": profile.region,
+            "recognized_signs": normalized,
+            "confidence": avg_conf,
+            "translated_phrase": matched_phrase,
+            "two_way_response_text": response_text,
+            "two_way_response_speech": response_text,
+            "action_hint": action_hint
         }

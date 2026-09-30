@@ -2,14 +2,18 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Activity, Camera, Mic, Hand, AlertTriangle, ShieldCheck, 
-  Send, RefreshCw, CheckCircle2, PhoneCall, HeartHandshake, Stethoscope
+  Send, RefreshCw, CheckCircle2, PhoneCall, HeartHandshake, Stethoscope,
+  FileCode, X, Download, HelpCircle, ShieldAlert
 } from 'lucide-react';
-import { performFusionAndSave } from '../services/api';
+import { performFusionAndSave, getAssessmentFhir } from '../services/api';
 import { speakText } from '../utils/speech';
 
 export default function AssessPainPage() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('self_report'); // self_report, camera, voice, sign, fusion
+  const [fhirModalOpen, setFhirModalOpen] = useState(false);
+  const [fhirData, setFhirData] = useState(null);
+  const [loadingFhir, setLoadingFhir] = useState(false);
 
   // Self report state
   const [selfReport, setSelfReport] = useState({
@@ -128,6 +132,31 @@ export default function AssessPainPage() {
     } finally {
       setFusing(false);
     }
+  };
+
+  const handleViewFhir = async () => {
+    if (!fusionResult || !fusionResult.assessment_id) return;
+    setLoadingFhir(true);
+    try {
+      const bundle = await getAssessmentFhir(fusionResult.assessment_id);
+      setFhirData(bundle);
+      setFhirModalOpen(true);
+    } catch (err) {
+      console.error("Failed to fetch FHIR bundle:", err);
+    } finally {
+      setLoadingFhir(false);
+    }
+  };
+
+  const downloadFhirJson = () => {
+    if (!fhirData) return;
+    const blob = new Blob([JSON.stringify(fhirData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `painsense-fhir-assessment-${fusionResult?.assessment_id || 'export'}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -499,7 +528,7 @@ export default function AssessPainPage() {
             <div className="space-y-6">
               
               {/* Header Triage Status */}
-              <div className={`p-5 rounded-2xl border flex items-center justify-between ${
+              <div className={`p-5 rounded-2xl border flex flex-col md:flex-row md:items-center justify-between gap-4 ${
                 fusionResult.triage_level === 'emergency' 
                   ? 'bg-red-50 border-red-200 text-red-900' 
                   : fusionResult.triage_level === 'urgent'
@@ -507,62 +536,198 @@ export default function AssessPainPage() {
                   : 'bg-emerald-50 border-emerald-200 text-emerald-900'
               }`}>
                 <div>
-                  <span className="text-[11px] font-bold uppercase tracking-wider block">System Triage Recommendation:</span>
-                  <h3 className="text-xl font-black capitalize mt-0.5">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-white/70 border border-current">
+                      SYSTEM RECOMMENDATION
+                    </span>
+                    <span className="text-xs font-semibold">Priority Triage</span>
+                  </div>
+                  <h3 className="text-2xl font-black capitalize">
                     {fusionResult.triage_level} Priority ({fusionResult.severity.toUpperCase()} Discomfort)
                   </h3>
-                  <p className="text-xs mt-1 font-medium max-w-xl">
+                  <p className="text-xs mt-1.5 font-medium max-w-xl opacity-90">
                     {fusionResult.recommended_next_step}
                   </p>
                 </div>
 
-                <div className="text-right">
-                  <span className="text-[11px] block font-bold">Uncertainty Metric</span>
-                  <span className="text-lg font-black">{Math.round(fusionResult.uncertainty * 100)}%</span>
-                  <span className="text-[10px] block opacity-75">Cross-channel divergence</span>
+                <div className="flex md:flex-col items-center md:items-end justify-between border-t md:border-t-0 pt-3 md:pt-0 border-current/20">
+                  <div className="text-left md:text-right">
+                    <span className="text-[11px] block font-bold uppercase tracking-wider">Uncertainty</span>
+                    <span className="text-xl font-black">{Math.round(fusionResult.uncertainty * 100)}%</span>
+                  </div>
+                  <div className="text-right mt-1">
+                    <span className="text-[10px] block opacity-80">Model Confidence: {Math.round(fusionResult.confidence * 100)}%</span>
+                  </div>
                 </div>
               </div>
 
-              {/* Evidence Breakdown Grid */}
+              {/* Strict Clinical Separation Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 
-                {/* Patient Ground Truth (Subjective) */}
-                <div className="p-4 bg-sky-50 rounded-xl border border-sky-100 space-y-2">
+                {/* 1. Patient Ground Truth (Subjective Report) */}
+                <div className="p-4 bg-sky-50 rounded-xl border border-sky-100 space-y-3">
                   <div className="flex items-center justify-between pb-2 border-b border-sky-200">
-                    <span className="font-bold text-xs text-sky-900">1. Patient Direct Report (Ground Truth)</span>
-                    <span className="text-[11px] text-sky-700 font-semibold">Priority</span>
+                    <div className="flex items-center space-x-1.5">
+                      <span className="px-2 py-0.5 bg-sky-200 text-sky-900 rounded text-[10px] font-black tracking-wider uppercase">
+                        USER REPORT
+                      </span>
+                      <span className="font-bold text-xs text-sky-900">Direct Subjective Input</span>
+                    </div>
+                    <span className="text-[10px] font-bold text-sky-700 bg-sky-100 px-2 py-0.5 rounded-full border border-sky-200">
+                      Ground Truth
+                    </span>
                   </div>
-                  <ul className="space-y-1 text-xs text-sky-800">
-                    {fusionResult.reported_symptoms.map((s, idx) => (
-                      <li key={idx} className="flex items-start space-x-1.5">
-                        <span className="font-bold text-sky-600">&bull;</span>
-                        <span>{s}</span>
-                      </li>
-                    ))}
+                  <ul className="space-y-1.5 text-xs text-sky-900">
+                    {fusionResult.reported_symptoms && fusionResult.reported_symptoms.length > 0 ? (
+                      fusionResult.reported_symptoms.map((s, idx) => (
+                        <li key={idx} className="flex items-start space-x-2">
+                          <span className="font-bold text-sky-600 mt-0.5">&bull;</span>
+                          <span>{s}</span>
+                        </li>
+                      ))
+                    ) : (
+                      <li className="text-slate-400 italic">No direct verbal or written report submitted.</li>
+                    )}
                   </ul>
                 </div>
 
-                {/* AI Observations (Objective Telemetry) */}
-                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+                {/* 2. AI Observations (Objective Telemetry) */}
+                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
                   <div className="flex items-center justify-between pb-2 border-b border-slate-200">
-                    <span className="font-bold text-xs text-slate-800">2. AI Observations (Supportive Telemetry)</span>
-                    <span className="text-[11px] text-slate-500 font-semibold">Observational</span>
+                    <div className="flex items-center space-x-1.5">
+                      <span className="px-2 py-0.5 bg-slate-200 text-slate-800 rounded text-[10px] font-black tracking-wider uppercase">
+                        AI OBSERVATION
+                      </span>
+                      <span className="font-bold text-xs text-slate-800">Supportive Telemetry</span>
+                    </div>
+                    <span className="text-[10px] font-medium text-slate-500 bg-white px-2 py-0.5 rounded-full border border-slate-200">
+                      Non-Diagnostic
+                    </span>
                   </div>
-                  <ul className="space-y-1 text-xs text-slate-700">
-                    {fusionResult.observed_indicators.map((ind, idx) => (
-                      <li key={idx} className="flex items-start space-x-1.5">
-                        <span className="font-bold text-slate-400">&bull;</span>
-                        <span>{ind}</span>
-                      </li>
-                    ))}
+                  <ul className="space-y-1.5 text-xs text-slate-700">
+                    {fusionResult.observed_indicators && fusionResult.observed_indicators.length > 0 ? (
+                      fusionResult.observed_indicators.map((ind, idx) => (
+                        <li key={idx} className="flex items-start space-x-2">
+                          <span className="font-bold text-slate-400 mt-0.5">&bull;</span>
+                          <span>{ind}</span>
+                        </li>
+                      ))
+                    ) : (
+                      <li className="text-slate-400 italic">No optical or acoustic features detected.</li>
+                    )}
                   </ul>
                 </div>
 
               </div>
+
+              {/* Explainable AI (XAI) Synthesis Panel */}
+              {fusionResult.explanation && (
+                <div className="p-5 bg-gradient-to-br from-indigo-50/70 via-purple-50/50 to-white rounded-2xl border border-indigo-100 space-y-4">
+                  <div className="flex items-center justify-between pb-2 border-b border-indigo-100">
+                    <div className="flex items-center space-x-2">
+                      <HelpCircle className="w-4 h-4 text-indigo-600" />
+                      <h4 className="font-bold text-sm text-slate-900">Explainable AI: Why did PAINSENSE-AI produce this result?</h4>
+                    </div>
+                    <span className="text-[11px] font-mono font-semibold text-indigo-700">
+                      Evidential Reasoning Engine
+                    </span>
+                  </div>
+
+                  <p className="text-xs text-slate-700 font-medium leading-relaxed bg-white/80 p-3 rounded-xl border border-indigo-100">
+                    {fusionResult.explanation.why_this_result || fusionResult.summary_text}
+                  </p>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+                    {/* Primary Evidence */}
+                    <div className="p-3 bg-white rounded-xl border border-emerald-100 shadow-2xs">
+                      <span className="font-bold text-emerald-800 block text-[11px] uppercase tracking-wider mb-1">
+                        Primary Ground Truth
+                      </span>
+                      <ul className="space-y-1 text-slate-600 text-[11px]">
+                        {fusionResult.explanation.primary_evidence?.map((item, idx) => (
+                          <li key={idx} className="leading-snug">&bull; {item}</li>
+                        )) || <li className="italic text-slate-400">None</li>}
+                      </ul>
+                    </div>
+
+                    {/* Supporting Evidence */}
+                    <div className="p-3 bg-white rounded-xl border border-sky-100 shadow-2xs">
+                      <span className="font-bold text-sky-800 block text-[11px] uppercase tracking-wider mb-1">
+                        Supporting Telemetry
+                      </span>
+                      <ul className="space-y-1 text-slate-600 text-[11px]">
+                        {fusionResult.explanation.supporting_evidence?.map((item, idx) => (
+                          <li key={idx} className="leading-snug">&bull; {item}</li>
+                        )) || <li className="italic text-slate-400">None</li>}
+                      </ul>
+                    </div>
+
+                    {/* Conflicting Evidence */}
+                    <div className="p-3 bg-white rounded-xl border border-amber-100 shadow-2xs">
+                      <span className="font-bold text-amber-800 block text-[11px] uppercase tracking-wider mb-1">
+                        Conflicting Markers
+                      </span>
+                      <ul className="space-y-1 text-slate-600 text-[11px]">
+                        {fusionResult.explanation.conflicting_evidence?.length > 0 ? (
+                          fusionResult.explanation.conflicting_evidence.map((item, idx) => (
+                            <li key={idx} className="leading-snug">&bull; {item}</li>
+                          ))
+                        ) : (
+                          <li className="text-slate-400 italic">No conflicting cues</li>
+                        )}
+                      </ul>
+                    </div>
+
+                    {/* Missing Evidence */}
+                    <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-2xs">
+                      <span className="font-bold text-slate-700 block text-[11px] uppercase tracking-wider mb-1">
+                        Unchecked Channels
+                      </span>
+                      <ul className="space-y-1 text-slate-500 text-[11px]">
+                        {fusionResult.explanation.missing_evidence?.length > 0 ? (
+                          fusionResult.explanation.missing_evidence.map((item, idx) => (
+                            <li key={idx} className="leading-snug">&bull; {item}</li>
+                          ))
+                        ) : (
+                          <li className="text-emerald-600 font-semibold">All channels active</li>
+                        )}
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Safety Assessment Audit Trail */}
+              {fusionResult.safety_audit && fusionResult.safety_audit.triggered_rules?.length > 0 && (
+                <div className="p-4 bg-red-50 rounded-xl border border-red-200 space-y-2">
+                  <div className="flex items-center justify-between pb-1 border-b border-red-200">
+                    <div className="flex items-center space-x-2">
+                      <ShieldAlert className="w-4 h-4 text-red-600" />
+                      <span className="font-bold text-xs text-red-900">Safety Flag Audit Trail</span>
+                    </div>
+                    <span className="text-[10px] font-mono uppercase bg-red-200 text-red-900 px-2 py-0.5 rounded font-bold">
+                      Rule Action: {fusionResult.safety_audit.action_taken}
+                    </span>
+                  </div>
+                  <div className="text-xs text-red-800 space-y-1">
+                    <p className="font-semibold">Triggered Safety Rules:</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {fusionResult.safety_audit.triggered_rules.map((rule, idx) => (
+                        <span key={idx} className="px-2 py-0.5 bg-red-100 rounded text-[11px] font-mono border border-red-200">
+                          {rule}
+                        </span>
+                      ))}
+                    </div>
+                    <p className="pt-1 text-[11px] font-medium">
+                      Recommendation: {fusionResult.safety_audit.recommended_action}
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {/* Modalities Used */}
               <div>
-                <span className="text-xs font-bold text-slate-700 block mb-1">Fused Modality Channels:</span>
+                <span className="text-xs font-bold text-slate-700 block mb-1.5">Fused Modality Channels:</span>
                 <div className="flex flex-wrap gap-2">
                   {fusionResult.communication_methods.map((method, i) => (
                     <span key={i} className="px-3 py-1 bg-slate-100 text-slate-800 rounded-lg text-xs font-semibold border border-slate-200">
@@ -573,10 +738,10 @@ export default function AssessPainPage() {
               </div>
 
               {/* Action Buttons */}
-              <div className="pt-4 border-t border-slate-100 flex flex-wrap gap-3">
+              <div className="pt-4 border-t border-slate-100 flex flex-wrap items-center gap-3">
                 <button
                   onClick={() => navigate('/timeline')}
-                  className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl flex items-center space-x-2"
+                  className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl flex items-center space-x-2"
                 >
                   <Activity className="w-4 h-4" />
                   <span>View in Timeline</span>
@@ -584,7 +749,7 @@ export default function AssessPainPage() {
 
                 <button
                   onClick={() => navigate('/doctor')}
-                  className="px-5 py-2.5 bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs rounded-xl flex items-center space-x-2"
+                  className="px-4 py-2.5 bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs rounded-xl flex items-center space-x-2"
                 >
                   <Stethoscope className="w-4 h-4" />
                   <span>Handover to Doctor Console</span>
@@ -592,10 +757,19 @@ export default function AssessPainPage() {
 
                 <button
                   onClick={() => navigate('/caregiver')}
-                  className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl flex items-center space-x-2"
+                  className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl flex items-center space-x-2"
                 >
                   <HeartHandshake className="w-4 h-4" />
                   <span>Notify Caregiver</span>
+                </button>
+
+                <button
+                  onClick={handleViewFhir}
+                  disabled={loadingFhir}
+                  className="px-4 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200 font-bold text-xs rounded-xl flex items-center space-x-2 ml-auto"
+                >
+                  <FileCode className="w-4 h-4 text-indigo-600" />
+                  <span>{loadingFhir ? 'Loading FHIR...' : 'View HL7 FHIR R4 Bundle'}</span>
                 </button>
               </div>
 
@@ -617,6 +791,55 @@ export default function AssessPainPage() {
         </div>
       )}
 
+      {/* HL7 FHIR R4 Modal Dialog */}
+      {fhirModalOpen && fhirData && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+          <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[85vh] flex flex-col shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150">
+            <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50 rounded-t-2xl">
+              <div className="flex items-center space-x-2">
+                <FileCode className="w-5 h-5 text-indigo-600" />
+                <div>
+                  <h3 className="font-bold text-sm text-slate-900">HL7 FHIR R4 Collection Bundle</h3>
+                  <span className="text-[11px] text-slate-500 font-mono">Resource Type: Bundle / type: collection</span>
+                </div>
+              </div>
+              <button
+                onClick={() => setFhirModalOpen(false)}
+                className="p-1 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-200/50"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-4 overflow-y-auto font-mono text-xs text-slate-800 bg-slate-900/95 text-emerald-400 rounded-none flex-1">
+              <pre className="whitespace-pre-wrap">{JSON.stringify(fhirData, null, 2)}</pre>
+            </div>
+
+            <div className="p-4 border-t border-slate-200 flex items-center justify-between bg-slate-50 rounded-b-2xl">
+              <span className="text-xs text-slate-500">
+                Standards: LOINC 72514-3 (Pain score), LOINC 11450-4, HL7 FHIR R4
+              </span>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={downloadFhirJson}
+                  className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold flex items-center space-x-1.5 shadow-sm"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Download JSON</span>
+                </button>
+                <button
+                  onClick={() => setFhirModalOpen(false)}
+                  className="px-3.5 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-lg text-xs font-bold"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
+

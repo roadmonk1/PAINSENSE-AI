@@ -1,53 +1,43 @@
 from typing import List, Dict, Any, Optional
 import math
+from ml.facial.inference import run_facial_inference
 
 class FacialPainAnalysisService:
     """
     Analyzes facial indicators based on clinical pain expression metrics
-    (Prkachin and Solomon Pain Intensity / PSPI inspired Action Units).
-    Action Units:
-    - AU4: Brow Lowerer
-    - AU6/7: Orbit tightening / Cheek raiser / Eyelid tightener
-    - AU9/10: Nose wrinkler / Upper lip raiser
-    - AU25/26/27: Mouth open / Jaw drop / Lip stretch
+    (Prkachin and Solomon Pain Intensity / PSPI inspired Action Units)
+    powered by the ml.facial pipeline.
     """
 
-    def analyze_features(self, features: Optional[Dict[str, float]] = None) -> Dict[str, Any]:
+    def analyze_features(
+        self,
+        features: Optional[Dict[str, float]] = None,
+        landmarks: Optional[List[Dict[str, float]]] = None,
+        lighting_score: Optional[float] = None
+    ) -> Dict[str, Any]:
         feat = features or {}
         brow_furrowing = float(feat.get("brow_furrowing", 0.15))
         orbital_tightening = float(feat.get("orbital_tightening", 0.10))
         mouth_tension = float(feat.get("mouth_tension", 0.12))
 
-        # PSPI-inspired composite intensity calculation (normalized 0 to 1)
-        composite = (brow_furrowing * 0.4) + (orbital_tightening * 0.35) + (mouth_tension * 0.25)
-        composite = max(0.0, min(1.0, composite))
-
-        indicators = []
-        if brow_furrowing > 0.45:
-            indicators.append("Prominent brow furrowing / corrugator contraction")
-        elif brow_furrowing > 0.25:
-            indicators.append("Mild brow lowering")
-
-        if orbital_tightening > 0.40:
-            indicators.append("Marked orbital tightening / eye narrowing")
-        elif orbital_tightening > 0.25:
-            indicators.append("Subtle orbital tension")
-
-        if mouth_tension > 0.40:
-            indicators.append("Elevated mouth/jaw tension or lip compression")
-
-        tension_level = "High" if composite > 0.60 else ("Moderate" if composite > 0.30 else "Low")
-        confidence = 0.82 if features else 0.70
+        # Invoke ML pipeline
+        ml_res = run_facial_inference(
+            client_features=feat,
+            landmarks=landmarks,
+            lighting_score=lighting_score
+        )
 
         return {
             "brow_furrowing": round(brow_furrowing, 2),
             "orbital_tightening": round(orbital_tightening, 2),
             "mouth_tension": round(mouth_tension, 2),
-            "grimace_score": round(composite, 2),
-            "tension_level": tension_level,
-            "confidence": confidence,
-            "observable_indicators": indicators if indicators else ["Relaxed baseline facial presentation"],
-            "model_status": "active"
+            "grimace_score": ml_res.get("grimace_score", 0.15),
+            "tension_level": ml_res.get("tension_level", "Low"),
+            "confidence": ml_res.get("confidence", 0.85),
+            "observable_indicators": ml_res.get("observable_indicators", ["Neutral facial baseline"]),
+            "model_status": "active_ml_pipeline",
+            "quality_warnings": ml_res.get("quality_warnings", []),
+            "disclaimer": ml_res.get("disclaimer", "AI observation only — not a medical diagnosis.")
         }
 
 class BodySignalAnalysisService:

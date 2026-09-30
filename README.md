@@ -7,7 +7,8 @@
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688.svg)]()
 [![React](https://img.shields.io/badge/React-19-61DAFB.svg)]()
 [![Tailwind CSS](https://img.shields.io/badge/TailwindCSS-v4-38B2AC.svg)]()
-[![Tests](https://img.shields.io/badge/Tests-13%20Passed-success.svg)]()
+[![FHIR](https://img.shields.io/badge/Interoperability-HL7%20FHIR%20R4-blueviolet.svg)]()
+[![Tests](https://img.shields.io/badge/Tests-17%20Passed-success.svg)]()
 
 > **Making pain easier to communicate.**
 >
@@ -32,16 +33,17 @@ PAINSENSE-AI's Multimodal Fusion Engine operates under a non-negotiable rule: **
 
 ## 2. Key Features
 
-- **Multimodal Fusion Engine**: Fuses optical action units, somatic guarding, vocal strain, speech transcription, sign language, and self-reports into a unified triage assessment with uncertainty metrics.
-- **Sign Language Communication**: Focused healthcare distress ASL vocabulary (`pain`, `chest`, `severe`, `help`, `doctor`, etc.) with sequence assembly (`[pain] + [chest] + [severe]` &rarr; *"Severe chest pain"*) and user correction feedback loops.
-- **Two-Way Accessible UX**: Communicates back using Web Speech API Text-to-Speech (TTS), high contrast visual alerts, and large accessible buttons.
-- **Optical & Posture Telemetry**: Analyzes Action Units based on the clinical Prkachin and Solomon Pain Intensity (PSPI) metric (AU4 brow furrowing, AU6/7 orbital tightening, AU25 mouth tension) and torso guarding.
-- **Voice & Acoustic Analysis**: Transcribes natural complaint narratives while estimating fundamental frequency perturbation (pitch jitter) and vocal strain.
+- **Multimodal Evidential Fusion Engine**: Fuses optical action units, somatic guarding, vocal strain, speech transcription, sign language, and self-reports into a unified triage assessment with uncertainty metrics and explainable AI breakdown.
+- **Sign Language Communication (ASL & ISL)**: Distinct linguistic profiles for **American Sign Language (ASL)** and **Indian Sign Language (ISL)** with temporal stability buffers, cultural dialect separation, and sequence assembly.
+- **HL7 FHIR R4 Prototype Exporter**: Exports clinical assessments as compliant FHIR R4 collection Bundles (`Patient`, `Observation` LOINC 72514-3, `Condition` unconfirmed).
+- **Two-Way Accessible UX**: Communicates back using Web Speech API Text-to-Speech (TTS), high contrast visual alerts, real-time sensor status badges, and large accessible buttons.
+- **Optical & Posture Telemetry**: Validates frame luminance ($I_{mean} \in [40, 245]$), head pose ($\pm 35^\circ$ yaw limits), multi-face rejection, and Action Units (AU4 brow furrowing, AU6/7 orbital tightening, AU25 mouth tension) using the clinical PSPI formulation.
+- **Voice & Acoustic Analysis**: SNR noise floor validation ($> 12\text{ dB}$), acoustic pitch tremor/jitter extraction, and decoupled clinical NLP entity extraction.
 - **Longitudinal Pain Timeline**: Interactive timeline tracking symptom evolution with filtering by severity, modality, and date.
-- **Physician Handover Console**: Converts multimodal telemetry into concise clinical summaries separating patient subjective statements from objective AI observations.
-- **Replaceable Calling Desk**: Seamless telephony workflow with deterministic **Demo Call Mode** for offline demonstration without billable telephony charges.
+- **Physician Handover Console**: Converts multimodal telemetry into standardized 6-section clinical summaries separating patient subjective statements from objective AI observations.
+- **Replaceable Calling Desk**: Seamless telephony workflow with deterministic **Demo Call Mode** and pre-call human confirmation dialogs.
 - **Caregiver Portal**: Monitored patient status cards, automated alerts feed, and emergency dispatch links.
-- **Privacy & Consent Sovereignty**: Local-only processing toggles and one-click data deletion (Right to Be Forgotten).
+- **Privacy & Consent Sovereignty**: Local-only processing toggles, GDPR Art. 20 JSON data archive downloads, and one-click data erasure.
 
 ---
 
@@ -49,12 +51,26 @@ PAINSENSE-AI's Multimodal Fusion Engine operates under a non-negotiable rule: **
 
 - **Frontend**: React 19, Vite, Tailwind CSS v4, Lucide Icons, React Router v7, Web Speech API, Web Audio API, Web Camera MediaDevices.
 - **Backend**: Python 3.11, FastAPI, Pydantic v2, SQLAlchemy ORM, SQLite / PostgreSQL.
-- **Machine Learning**: Scikit-Learn, NumPy, MediaPipe landmark geometry models, PSPI Action Unit formulations.
+- **Machine Learning**: Scikit-Learn, SciPy, NumPy, MediaPipe landmark geometry models, PSPI Action Unit formulations.
+- **Interoperability**: HL7 FHIR Release 4, LOINC (72514-3, 11450-4).
 - **Testing**: Pytest, FastAPI TestClient, Vite Production Builder.
 
 ---
 
-## 4. Project Structure
+## 4. Documentation & Research Benchmarks
+
+Comprehensive architectural documentation and evaluation benchmarks are located in `docs/` and `ml/`:
+- [`docs/UPGRADE_AUDIT.md`](docs/UPGRADE_AUDIT.md): Comprehensive architectural audit across all 33 phases.
+- [`docs/FINAL_UPGRADE_REPORT.md`](docs/FINAL_UPGRADE_REPORT.md): Complete engineering report with test matrices and clinical audit results.
+- [`docs/FHIR.md`](docs/FHIR.md): HL7 FHIR Release 4 interoperability mapping specification.
+- [`docs/EDGE_AI.md`](docs/EDGE_AI.md): On-device runtime architecture, MediaPipe pipelines, and edge privacy enclave.
+- [`docs/ROBUSTNESS.md`](docs/ROBUSTNESS.md): Defensive safeguards against extreme lighting, acoustic noise, and sensor dropouts.
+- [`ml/evaluation/benchmark_ablation.py`](ml/evaluation/benchmark_ablation.py): 8-condition multimodal ablation study.
+- [`ml/evaluation/ablation_results.json`](ml/evaluation/ablation_results.json): Quantified benchmark results.
+
+---
+
+## 5. Project Structure
 
 ```
 PAINSENSE-AI/
@@ -62,7 +78,7 @@ PAINSENSE-AI/
 │   ├── src/
 │   │   ├── components/           # Navbar, Footer
 │   │   ├── pages/                # Landing, Dashboard, Assess, Camera, Voice, Sign, Timeline, Doctor, Caregiver, Settings, Limitations
-│   │   ├── services/api.js       # Unified REST API client
+│   │   ├── services/api.js       # Unified REST API client (supports FHIR & Dialects)
 │   │   ├── utils/speech.js       # Accessible Text-to-Speech engine
 │   │   ├── App.jsx               # Application routing and accessibility theme state
 │   │   └── index.css             # Tailwind v4 and high-contrast styles
@@ -71,23 +87,28 @@ PAINSENSE-AI/
 │   ├── app/
 │   │   ├── api/                  # Auth, Assessment, Camera, Voice, Sign, Fusion, Timeline, Doctor, Caregiver, Safety, Privacy
 │   │   ├── auth/                 # PBKDF2 hashing, JWT tokens, RBAC dependencies
-│   │   ├── models/entities.py    # SQLAlchemy database schema
-│   │   ├── schemas/schemas.py    # Pydantic v2 schemas
+│   │   ├── models/entities.py    # SQLAlchemy database schema (including SafetyAuditRecord)
+│   │   ├── schemas/schemas.py    # Pydantic v2 schemas (with Explainable AI models)
 │   │   ├── services/             # FusionService, SafetyService, SignLanguageService, CameraService, VoiceService, CallService, DoctorService
+│   │   │   └── fhir/             # HL7 FHIR R4 Bundle exporter
 │   │   ├── config.py             # App settings and environment variables
 │   │   ├── database.py           # Engine and DB session provider
 │   │   └── main.py               # Application entrypoint & demo data seeder
-│   ├── tests/                    # Automated pytest suite (13 passing tests)
-│   └── requirements.txt
-├── ml/                           # ML Research & Evaluation
-│   ├── facial/action_units.py    # PSPI Action Unit metrics
-│   ├── voice/acoustic_features.py# Jitter and vocal strain extractor
-│   ├── sign_language/sequence_model.py # Hand landmark geometry and sequence assembler
-│   └── evaluation/               # Multimodal benchmark scripts and outputs
-├── docs/                         # Comprehensive Documentation
+│   └── tests/                    # Automated pytest suite (17 passing tests)
+├── ml/                           # Modular Machine Learning Packages
+│   ├── facial/                   # Preprocessing, PSPI baseline, AU feature extraction, regressor
+│   ├── voice/                    # Acoustic strain, jitter/shimmer, NLP entity extraction, model
+│   ├── sign_language/            # Distinct ASL & ISL profiles, temporal buffer, sequence assembler
+│   └── evaluation/               # Multimodal benchmark & 8-condition ablation study
+├── docs/                         # Specifications & Clinical Audit
+│   ├── UPGRADE_AUDIT.md          # 33-phase comprehensive upgrade audit
+│   ├── FINAL_UPGRADE_REPORT.md   # Complete engineering & clinical report
+│   ├── FHIR.md                   # HL7 FHIR Release 4 specification
+│   ├── EDGE_AI.md                # On-device runtime architecture
+│   ├── ROBUSTNESS.md             # Sensor safeguards & degraded modes
 │   ├── ARCHITECTURE.md           # System design & architecture diagram
 │   ├── ML_PIPELINE.md            # Benchmark evaluation results & PSPI formulas
-│   ├── SIGN_LANGUAGE.md          # ASL vocabulary & two-way feedback
+│   ├── SIGN_LANGUAGE.md          # Dialect profiles & two-way feedback
 │   ├── API.md                    # REST endpoint reference
 │   ├── SAFETY.md                 # Red flag protocol & triage guidelines
 │   ├── DEPLOYMENT.md             # Vercel & Render deployment guides

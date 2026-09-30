@@ -99,17 +99,38 @@ export default function VoicePage() {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
       
       {/* Page Title */}
-      <div>
-        <div className="flex items-center space-x-2 text-indigo-600 font-bold text-xs uppercase tracking-wider mb-1">
-          <Mic className="w-4 h-4" />
-          <span>Speech Recognition & Acoustic Analysis</span>
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <div className="flex items-center space-x-2 text-indigo-600 font-bold text-xs uppercase tracking-wider mb-1">
+            <Mic className="w-4 h-4" />
+            <span>Speech Recognition & Acoustic Analysis</span>
+          </div>
+          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">
+            Voice Assessment Module
+          </h1>
+          <p className="text-slate-600 text-sm mt-1 max-w-3xl">
+            Extracts clinical indicators (location, duration, severity, character) from spoken words alongside acoustic vocal strain.
+          </p>
         </div>
-        <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">
-          Voice Assessment Module
-        </h1>
-        <p className="text-slate-600 text-sm mt-1 max-w-3xl">
-          Extracts clinical indicators (location, duration, severity, character) from spoken words alongside acoustic vocal strain.
-        </p>
+
+        <div className="flex items-center space-x-2">
+          {recording ? (
+            <span className="px-3 py-1 bg-red-50 text-red-700 rounded-full text-xs font-bold border border-red-200 flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-red-500 animate-ping"></span>
+              Mic Recording Active
+            </span>
+          ) : audioUrl ? (
+            <span className="px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full text-xs font-bold border border-emerald-200 flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+              Audio Captured
+            </span>
+          ) : (
+            <span className="px-3 py-1 bg-slate-100 text-slate-600 rounded-full text-xs font-medium border border-slate-200 flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-slate-400"></span>
+              Mic Standby
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Grid: Audio Capture & Extracted Entities */}

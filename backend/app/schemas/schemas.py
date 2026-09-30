@@ -94,10 +94,14 @@ class VoiceAnalysisResponse(BaseModel):
 class SignSequenceInput(BaseModel):
     signs: List[str]
     confidence_scores: Optional[List[float]] = None
+    language_code: Optional[str] = "asl"
     user_id: Optional[int] = None
     timestamp: Optional[datetime.datetime] = None
 
 class SignRecognitionResponse(BaseModel):
+    language_code: Optional[str] = "asl"
+    language_name: Optional[str] = "American Sign Language"
+    region: Optional[str] = None
     recognized_signs: List[str]
     confidence: float
     translated_phrase: str
@@ -105,6 +109,7 @@ class SignRecognitionResponse(BaseModel):
     suggested_clarification: Optional[str] = None
     two_way_response_text: str
     two_way_response_speech: str
+    action_hint: Optional[str] = "routine"
 
 class SignFeedbackInput(BaseModel):
     recognized_signs: List[str]
@@ -138,6 +143,15 @@ class MultimodalFusionRequest(BaseModel):
     self_report: Optional[PainReportCreate] = None
     notes: Optional[str] = None
 
+class FusionExplanation(BaseModel):
+    primary_evidence: List[str] = []
+    supporting_evidence: List[str] = []
+    conflicting_evidence: List[str] = []
+    missing_evidence: List[str] = []
+    confidence_rationale: str = "High concordance"
+    uncertainty_breakdown: str = "Normal sensor variance"
+    why_this_result: str = "User self-report confirmed by supportive telemetry."
+
 class MultimodalFusionResponse(BaseModel):
     assessment_id: Optional[int] = None
     observed_indicators: List[str]
@@ -150,6 +164,7 @@ class MultimodalFusionResponse(BaseModel):
     recommended_next_step: str
     summary_text: str
     is_emergency: bool = False
+    explanation: Optional[FusionExplanation] = None
     disclaimer: str = "AI-generated assessment — not a medical diagnosis. A qualified healthcare professional must evaluate medical conditions."
 
 # --- Timeline ---

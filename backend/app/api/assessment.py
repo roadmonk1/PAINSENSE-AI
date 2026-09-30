@@ -13,6 +13,7 @@ from backend.app.schemas.schemas import (
 )
 from backend.app.services.fusion_service import fusion_service
 from backend.app.services.doctor_service import doctor_service
+from backend.app.services.fhir.fhir_exporter import FHIRExporter
 from backend.app.auth.deps import get_optional_user
 
 router = APIRouter(prefix="/assessment", tags=["Assessment"])
@@ -224,3 +225,39 @@ def get_assessment_detail(id: int, db: Session = Depends(get_db)):
             for obs in a.ai_observations
         ]
     }
+
+@router.get("/{id}/fhir")
+def get_assessment_fhir_bundle(id: int, db: Session = Depends(get_db)):
+    """Exports assessment as an HL7 FHIR R4 standard JSON collection Bundle."""
+    a = db.query(Assessment).filter(Assessment.id == id).first()
+    if not a:
+        raise HTTPException(status_code=404, detail="Assessment not found")
+
+    user = db.query(User).filter(User.id == a.user_id).first()
+    patient_name = user.full_name if user else f"Patient #{a.user_id}"
+
+    severity_score = 0
+    pain_loc = "Unspecified"
+    pain_type = "Unspecified"
+    if a.pain_report:
+        severity_score = a.pain_report.severity_score or 0
+        pain_loc = a.pain_report.pain_location or "Unspecified"
+        pain_type = a.pain_report.pain_type or "Unspecified"
+    else:
+        # Map qualitative severity to 0-10 scale if no report exists
+        sev_map = {"none": 0, "mild": 3, "moderate": 6, "severe": 9, "emergency": 10}
+        severity_score = sev_map.get(str(a.overall_severity).lower(), 5)
+
+    bundle = FHIRExporter.export_assessment_to_fhir(
+        assessment_id=a.id,
+        patient_id=a.user_id,
+        patient_name=patient_name,
+        severity_score=severity_score,
+        pain_location=pain_loc,
+        pain_type=pain_type,
+        summary_text=a.summary_text or f"Assessment #{a.id}",
+        triage_level=a.triage_level or "routine",
+        timestamp=a.created_at
+    )
+    return bundle
+

@@ -106,17 +106,38 @@ export default function CameraPage() {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
       
       {/* Title & Guidelines */}
-      <div>
-        <div className="flex items-center space-x-2 text-sky-600 font-bold text-xs uppercase tracking-wider mb-1">
-          <Camera className="w-4 h-4" />
-          <span>Optical & Somatic Telemetry</span>
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <div className="flex items-center space-x-2 text-sky-600 font-bold text-xs uppercase tracking-wider mb-1">
+            <Camera className="w-4 h-4" />
+            <span>Optical & Somatic Telemetry</span>
+          </div>
+          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">
+            Camera Facial & Posture Analysis
+          </h1>
+          <p className="text-slate-600 text-sm mt-1 max-w-3xl">
+            Monitors observable action units (AU4 brow furrowing, AU6/7 orbital tightening, mouth tension) and somatic guarding.
+          </p>
         </div>
-        <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">
-          Camera Facial & Posture Analysis
-        </h1>
-        <p className="text-slate-600 text-sm mt-1 max-w-3xl">
-          Monitors observable action units (AU4 brow furrowing, AU6/7 orbital tightening, mouth tension) and somatic guarding.
-        </p>
+
+        <div className="flex items-center space-x-2">
+          {cameraActive ? (
+            <span className="px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full text-xs font-bold border border-emerald-200 flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              Camera Feed Active
+            </span>
+          ) : permissionState === 'denied' ? (
+            <span className="px-3 py-1 bg-amber-50 text-amber-800 rounded-full text-xs font-bold border border-amber-200 flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+              Camera Denied (Simulated Mode)
+            </span>
+          ) : (
+            <span className="px-3 py-1 bg-slate-100 text-slate-600 rounded-full text-xs font-medium border border-slate-200 flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-slate-400"></span>
+              Camera Standby
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Strict Medical Boundary Alert */}

@@ -23,11 +23,11 @@ export async function analyzeVoice(transcript, acousticFeatures = {}) {
   return res.json();
 }
 
-export async function analyzeSignSequence(signs, confidenceScores = []) {
+export async function analyzeSignSequence(signs, confidenceScores = [], languageCode = 'asl') {
   const res = await fetch(`${API_BASE}/sign-language/analyze`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ signs, confidence_scores: confidenceScores })
+    body: JSON.stringify({ signs, confidence_scores: confidenceScores, language_code: languageCode })
   });
   return res.json();
 }
@@ -41,8 +41,8 @@ export async function submitSignFeedback(feedback) {
   return res.json();
 }
 
-export async function getSignVocabulary() {
-  const res = await fetch(`${API_BASE}/sign-language/vocabulary`);
+export async function getSignVocabulary(lang = 'asl') {
+  const res = await fetch(`${API_BASE}/sign-language/vocabulary?lang=${encodeURIComponent(lang)}`);
   return res.json();
 }
 
@@ -59,6 +59,12 @@ export async function getAssessmentHistory() {
   const res = await fetch(`${API_BASE}/assessment/history`);
   return res.json();
 }
+
+export async function getAssessmentFhir(assessmentId) {
+  const res = await fetch(`${API_BASE}/assessment/${assessmentId}/fhir`);
+  return res.json();
+}
+
 
 export async function getTimeline(severity = null, modality = null) {
   let url = `${API_BASE}/timeline`;
@@ -135,3 +141,9 @@ export async function deleteUserData() {
   const res = await fetch(`${API_BASE}/privacy/data`, { method: 'DELETE' });
   return res.json();
 }
+
+export async function exportUserData() {
+  const res = await fetch(`${API_BASE}/privacy/export`);
+  return res.json();
+}
+
