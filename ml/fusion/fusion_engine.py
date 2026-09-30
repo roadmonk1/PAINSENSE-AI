@@ -25,6 +25,7 @@ class MultimodalEvidence(BaseModel):
     sign_observation: Optional[Dict[str, Any]] = None
     safety_flags: List[str] = Field(default_factory=list)
     triage_level: str = "routine"
+    severity: str = "none"
     confidence: float = 0.85
     uncertainty: float = 0.10
     divergence: float = 0.0
@@ -159,6 +160,15 @@ class MultimodalFusionEngine:
             "provenance": "MULTIMODAL EVIDENTIAL FUSION (Ground Truth Primacy)"
         }
 
+        if final_norm >= 0.75:
+            sev = "severe"
+        elif final_norm >= 0.45:
+            sev = "moderate"
+        elif final_norm >= 0.15:
+            sev = "mild"
+        else:
+            sev = "none"
+
         return MultimodalEvidence(
             user_report=self_report,
             vision_observation=vision,
@@ -166,6 +176,7 @@ class MultimodalFusionEngine:
             sign_observation=sign,
             safety_flags=safety_flags,
             triage_level=triage,
+            severity=sev,
             confidence=mean_conf,
             uncertainty=uncertainty,
             divergence=divergence,

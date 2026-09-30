@@ -1,0 +1,23 @@
+{
+  "name": "painsense-ai",
+  "version": "1.2.0-Enterprise",
+  "description": "Multimodal Pain Detection, Sign-Language Communication & Healthcare Assistance System",
+  "type": "module",
+  "scripts": {
+    "dev": "node scripts/start.js",
+    "doctor": "node scripts/run_doctor.js",
+    "test": "node scripts/run_tests.js",
+    "build": "cd frontend && npm run build",
+    "reset": "node scripts/reset_local.js"
+  },
+  "keywords": [
+    "healthcare",
+    "pain-detection",
+    "sign-language",
+    "multimodal",
+    "fhir",
+    "accessibility"
+  ],
+  "author": "PAINSENSE-AI Team",
+  "license": "MIT"
+}

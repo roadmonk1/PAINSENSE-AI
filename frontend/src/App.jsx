@@ -14,10 +14,20 @@ import CaregiverPage from './pages/CaregiverPage';
 import DoctorAssistancePage from './pages/DoctorAssistancePage';
 import AILimitationsPage from './pages/AILimitationsPage';
 import SettingsPage from './pages/SettingsPage';
+import LoginPage from './pages/LoginPage';
+import { getCurrentUser } from './services/api';
 
 export default function App() {
   const [highContrast, setHighContrast] = useState(false);
-  const [currentRole, setCurrentRole] = useState('patient'); // patient, caregiver, doctor
+  const [currentUser, setCurrentUser] = useState(() => getCurrentUser());
+  const [currentRole, setCurrentRole] = useState(() => getCurrentUser()?.role || 'patient');
+
+  const handleLoginSuccess = (user) => {
+    setCurrentUser(user);
+    if (user && user.role) {
+      setCurrentRole(user.role);
+    }
+  };
 
   useEffect(() => {
     if (highContrast) {
@@ -34,12 +44,15 @@ export default function App() {
           highContrast={highContrast} 
           setHighContrast={setHighContrast} 
           currentRole={currentRole} 
-          setCurrentRole={setCurrentRole} 
+          setCurrentRole={setCurrentRole}
+          currentUser={currentUser}
+          setCurrentUser={setCurrentUser}
         />
 
         <main className="flex-1">
           <Routes>
             <Route path="/" element={<LandingPage />} />
+            <Route path="/login" element={<LoginPage onLoginSuccess={handleLoginSuccess} />} />
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/assess" element={<AssessPainPage />} />
             <Route path="/camera" element={<CameraPage />} />

@@ -4,11 +4,55 @@
 
 [![Build Status](https://img.shields.io/badge/Build-Passing-brightgreen.svg)]()
 [![Python](https://img.shields.io/badge/Python-3.11-blue.svg)]()
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688.svg)]()
+[![FastAPI](https://img.shields.io/badge/FastAPI-1.2.0--Enterprise-009688.svg)]()
 [![React](https://img.shields.io/badge/React-19-61DAFB.svg)]()
 [![Tailwind CSS](https://img.shields.io/badge/TailwindCSS-v4-38B2AC.svg)]()
 [![FHIR](https://img.shields.io/badge/Interoperability-HL7%20FHIR%20R4-blueviolet.svg)]()
-[![Tests](https://img.shields.io/badge/Tests-17%20Passed-success.svg)]()
+[![Tests](https://img.shields.io/badge/Tests-23%20Passed-success.svg)]()
+
+---
+
+# Run PAINSENSE-AI
+
+## Option 1 — Docker (Recommended)
+
+```bash
+docker compose up --build
+```
+
+Open:
+```text
+http://localhost:3000
+```
+
+## Option 2 — Development (Local One-Command)
+
+```bash
+npm run dev
+```
+
+Open:
+```text
+http://localhost:3000
+```
+
+### Preflight Health & Subsystem Inspection
+To verify all 18 clinical, machine learning, and security components before launching:
+```bash
+npm run doctor
+```
+
+### One-Command Unified Testing
+```bash
+npm test
+```
+
+### Local Development State Reset
+```bash
+npm run reset
+```
+
+---
 
 > **Making pain easier to communicate.**
 >

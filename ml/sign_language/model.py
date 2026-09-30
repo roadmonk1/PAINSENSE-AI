@@ -21,7 +21,7 @@ class SignLanguageModel:
     def __init__(self, language_code: str = "asl"):
         self.language_code = language_code.lower().strip()
         self.profile: SignLanguageProfile = get_profile(self.language_code)
-        self.temporal_buffer = TemporalGestureBuffer(buffer_size=15, min_hold_frames=4)
+        self.temporal_buffer = TemporalGestureBuffer(window_size=15)
 
     def set_language(self, language_code: str) -> None:
         """Switches active sign language profile."""

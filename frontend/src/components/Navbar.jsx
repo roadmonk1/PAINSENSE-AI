@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
   Activity, Camera, Mic, Hand, Clock, HeartHandshake, Stethoscope, 
-  Settings, AlertTriangle, Eye, ShieldAlert, PhoneCall, Menu, X
+  Settings, AlertTriangle, Eye, ShieldAlert, PhoneCall, Menu, X, LogIn, LogOut, UserCheck
 } from 'lucide-react';
+import { logoutUser } from '../services/api';
 
-export default function Navbar({ highContrast, setHighContrast, currentRole, setCurrentRole }) {
+export default function Navbar({ highContrast, setHighContrast, currentRole, setCurrentRole, currentUser, setCurrentUser }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
 
@@ -95,6 +96,33 @@ export default function Navbar({ highContrast, setHighContrast, currentRole, set
                 </button>
               ))}
             </div>
+
+            {/* User Login/Logout */}
+            {currentUser ? (
+              <div className="flex items-center space-x-2 bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1 text-xs">
+                <UserCheck className="w-3.5 h-3.5 text-emerald-400" />
+                <span className="text-slate-200 font-medium max-w-[90px] truncate">{currentUser.full_name?.split(' ')[0] || 'User'}</span>
+                <button
+                  onClick={() => {
+                    logoutUser();
+                    if (setCurrentUser) setCurrentUser(null);
+                  }}
+                  className="text-slate-400 hover:text-red-400 ml-1"
+                  title="Sign out"
+                >
+                  <LogOut className="w-3 h-3" />
+                </button>
+              </div>
+            ) : (
+              <Link
+                to="/login"
+                className="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1 transition-colors"
+                title="Sign in to your account"
+              >
+                <LogIn className="w-3.5 h-3.5 text-sky-400" />
+                <span>Login</span>
+              </Link>
+            )}
 
             {/* Quick Emergency Button */}
             <Link
