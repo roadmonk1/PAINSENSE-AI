@@ -14,7 +14,7 @@ from backend.app.schemas.schemas import (
 from backend.app.services.fusion_service import fusion_service
 from backend.app.services.doctor_service import doctor_service
 from backend.app.services.fhir.fhir_exporter import FHIRExporter
-from backend.app.auth.deps import get_optional_user
+from backend.app.auth.deps import get_optional_user, verify_patient_access
 
 router = APIRouter(prefix="/assessment", tags=["Assessment"])
 
@@ -189,10 +189,20 @@ def get_assessment_history(
     return results
 
 @router.get("/{id}")
-def get_assessment_detail(id: int, db: Session = Depends(get_db)):
+def get_assessment_detail(
+    id: int,
+    db: Session = Depends(get_db),
+    user: Optional[User] = Depends(get_optional_user)
+):
     a = db.query(Assessment).filter(Assessment.id == id).first()
     if not a:
         raise HTTPException(status_code=404, detail="Assessment not found")
+
+    if not verify_patient_access(user, a.user_id, db):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: You are not authorized to view this patient's assessment"
+        )
 
     pain_rep = None
     if a.pain_report:
@@ -227,11 +237,21 @@ def get_assessment_detail(id: int, db: Session = Depends(get_db)):
     }
 
 @router.get("/{id}/fhir")
-def get_assessment_fhir_bundle(id: int, db: Session = Depends(get_db)):
+def get_assessment_fhir_bundle(
+    id: int,
+    db: Session = Depends(get_db),
+    user: Optional[User] = Depends(get_optional_user)
+):
     """Exports assessment as an HL7 FHIR R4 standard JSON collection Bundle."""
     a = db.query(Assessment).filter(Assessment.id == id).first()
     if not a:
         raise HTTPException(status_code=404, detail="Assessment not found")
+
+    if not verify_patient_access(user, a.user_id, db):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: You are not authorized to export this patient's clinical records"
+        )
 
     user = db.query(User).filter(User.id == a.user_id).first()
     patient_name = user.full_name if user else f"Patient #{a.user_id}"

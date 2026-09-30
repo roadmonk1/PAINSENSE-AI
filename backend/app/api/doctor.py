@@ -6,18 +6,28 @@ from backend.app.models.entities import Assessment, User, DoctorSummaryRecord
 from backend.app.schemas.schemas import DoctorSummaryResponse, CallRequest, CallResponse
 from backend.app.services.doctor_service import doctor_service
 from backend.app.services.call_service import call_service
-from backend.app.auth.deps import get_optional_user
+from backend.app.auth.deps import get_optional_user, verify_patient_access
 
 router = APIRouter(prefix="/doctor", tags=["Doctor Assistance"])
 
 @router.get("/summary/{assessment_id}", response_model=DoctorSummaryResponse)
-def get_or_generate_summary(assessment_id: int, db: Session = Depends(get_db)):
+def get_or_generate_summary(
+    assessment_id: int,
+    db: Session = Depends(get_db),
+    user: Optional[User] = Depends(get_optional_user)
+):
     assessment = db.query(Assessment).filter(Assessment.id == assessment_id).first()
     if not assessment:
         raise HTTPException(status_code=404, detail="Assessment not found")
 
-    user = assessment.user
-    patient_name = user.full_name if user else "Patient"
+    if not verify_patient_access(user, assessment.user_id, db):
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: You are not authorized to access clinical handover for this patient"
+        )
+
+    patient_user = assessment.user
+    patient_name = patient_user.full_name if patient_user else "Patient"
 
     # Prepare pain details
     reported_pain = {}

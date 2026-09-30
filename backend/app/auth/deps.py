@@ -61,3 +61,50 @@ def require_roles(allowed_roles: List[str]):
             )
         return current_user
     return role_checker
+
+def get_strict_current_user(
+    token: Optional[str] = Depends(oauth2_scheme),
+    db: Session = Depends(get_db)
+) -> User:
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    if not token:
+        raise credentials_exception
+    payload = decode_access_token(token)
+    if payload is None:
+        raise credentials_exception
+    email: str = payload.get("sub")
+    if email is None:
+        raise credentials_exception
+    user = db.query(User).filter(User.email == email).first()
+    if user is None:
+        raise credentials_exception
+    return user
+
+def verify_patient_access(user: Optional[User], patient_id: int, db: Session) -> bool:
+    """
+    Role-Based Access Control & Patient Isolation Rule:
+    - If user is None (demo mode without token): allowed.
+    - If user is admin or doctor: allowed (clinical oversight).
+    - If user is patient: strictly allowed only if user.id == patient_id.
+    - If user is caregiver: allowed only if an active CaregiverPatientLink exists between user.id and patient_id.
+    - Otherwise forbidden.
+    """
+    if user is None:
+        return True
+    if user.role in ["doctor", "admin"]:
+        return True
+    if user.role == "patient":
+        return user.id == patient_id
+    if user.role == "caregiver":
+        from backend.app.models.entities import CaregiverPatientLink
+        link = db.query(CaregiverPatientLink).filter(
+            CaregiverPatientLink.caregiver_id == user.id,
+            CaregiverPatientLink.patient_id == patient_id,
+            CaregiverPatientLink.status == "active"
+        ).first()
+        return link is not None
+    return False

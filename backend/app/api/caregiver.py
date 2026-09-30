@@ -13,12 +13,32 @@ def get_caregiver_dashboard(
     db: Session = Depends(get_db),
     user: Optional[User] = Depends(get_optional_user)
 ):
-    caregiver_id = user.id if user else 2
+    # RBAC: Patient accounts cannot access caregiver dashboard
+    if user and user.role == "patient":
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: Patient accounts cannot access the caregiver dashboard"
+        )
 
-    # Query linked patient assessments and alerts
-    patients = db.query(User).filter(User.role == "patient").all()
-    recent_alerts = db.query(CaregiverAlertRecord).order_by(CaregiverAlertRecord.sent_at.desc()).limit(10).all()
-    recent_assessments = db.query(Assessment).order_by(Assessment.created_at.desc()).limit(10).all()
+    # Filter patients by active link for authenticated caregivers
+    if user and user.role == "caregiver":
+        links = db.query(CaregiverPatientLink).filter(
+            CaregiverPatientLink.caregiver_id == user.id,
+            CaregiverPatientLink.status == "active"
+        ).all()
+        linked_ids = [l.patient_id for l in links]
+        if linked_ids:
+            patients = db.query(User).filter(User.id.in_(linked_ids)).all()
+            recent_alerts = db.query(CaregiverAlertRecord).filter(
+                CaregiverAlertRecord.user_id.in_(linked_ids)
+            ).order_by(CaregiverAlertRecord.sent_at.desc()).limit(10).all()
+        else:
+            patients = []
+            recent_alerts = []
+    else:
+        # Default unauthenticated demo view
+        patients = db.query(User).filter(User.role == "patient").all()
+        recent_alerts = db.query(CaregiverAlertRecord).order_by(CaregiverAlertRecord.sent_at.desc()).limit(10).all()
 
     patient_cards = []
     for p in patients[:5]:

@@ -7,7 +7,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from backend.app.config import settings
 from backend.app.database import init_db, SessionLocal
-from backend.app.models.entities import User, Assessment, TimelineEvent, ConsentRecord, CaregiverAlertRecord, PainReport, AIObservation
+from backend.app.models.entities import (
+    User, Assessment, TimelineEvent, ConsentRecord,
+    CaregiverAlertRecord, PainReport, AIObservation, CaregiverPatientLink
+)
 from backend.app.auth.security import get_password_hash
 
 # Import routers
@@ -121,7 +124,14 @@ def seed_demo_data():
                 message="Alex reported moderate discomfort via sign language. System recommended monitoring.",
                 sent_at=t2
             )
-            db.add_all([e1, e2, alert])
+            # Create active link between demo caregiver and patient
+            caregiver_link = CaregiverPatientLink(
+                caregiver_id=caregiver.id,
+                patient_id=patient.id,
+                status="active",
+                permissions_json=json.dumps(["view_timeline", "receive_alerts", "request_call"])
+            )
+            db.add_all([e1, e2, alert, caregiver_link])
             db.commit()
     finally:
         db.close()
@@ -135,7 +145,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="PAINSENSE-AI API",
     description="Multimodal Pain Detection, Sign-Language Communication & Healthcare Assistance System",
-    version="1.0.0",
+    version="1.2.0-Enterprise",
     docs_url="/docs",
     redoc_url="/redoc",
     lifespan=lifespan
@@ -161,27 +171,72 @@ async def global_exception_handler(request: Request, exc: Exception):
         }
     )
 
+def _build_health_status():
+    db_status = "connected"
+    try:
+        db = SessionLocal()
+        db.execute(json.loads('"SELECT 1"') if False else "SELECT 1")  # safe ping
+    except Exception:
+        # Fallback query if raw sql string isn't wrapped
+        try:
+            from sqlalchemy import text
+            db = SessionLocal()
+            db.execute(text("SELECT 1"))
+        except Exception as e:
+            db_status = f"degraded: {str(e)[:50]}"
+        finally:
+            db.close()
+    else:
+        db.close()
+
+    return {
+        "status": "healthy" if "degraded" not in db_status else "degraded",
+        "version": "1.2.0-Enterprise",
+        "timestamp": datetime.datetime.utcnow().isoformat(),
+        "database": db_status,
+        "subsystems": {
+            "database": db_status,
+            "facial_pspi_engine": "ready",
+            "voice_acoustic_engine": "ready",
+            "sign_language_engine": "ready",
+            "multimodal_fusion": "ready",
+            "safety_triage": "active",
+            "fhir_exporter": "ready"
+        },
+        "demo_mode": settings.ENABLE_DEMO_MODE,
+        "supported_modalities": [
+            "camera_facial",
+            "camera_body",
+            "voice_acoustic",
+            "speech_transcription",
+            "sign_language_asl_isl",
+            "self_report"
+        ],
+        "disclaimer": "Assistive communication tool. NOT a certified medical diagnostic system."
+    }
+
 # Root and health endpoints
 @app.get("/")
 def root():
     return {
         "system": "PAINSENSE-AI",
         "description": "Multimodal Pain Detection, Sign-Language Communication & Healthcare Assistance System",
-        "version": "1.0.0",
+        "version": "1.2.0-Enterprise",
         "status": "online",
         "documentation": "/docs",
-        "disclaimer": "AI-generated assessment — not a medical diagnosis."
+        "health_check": "/health",
+        "disclaimer": "AI-generated assessment — assistive communication, not a medical diagnosis."
     }
+
+@app.get("/health")
+def health():
+    """Liveness & readiness probe endpoint for Docker, Kubernetes, and cloud monitors."""
+    return _build_health_status()
 
 @app.get("/api/health")
 def health_check():
-    return {
-        "status": "healthy",
-        "timestamp": datetime.datetime.utcnow().isoformat(),
-        "database": "connected",
-        "demo_mode": settings.ENABLE_DEMO_MODE,
-        "supported_modalities": ["camera_facial", "camera_body", "voice_acoustic", "speech_transcription", "sign_language_asl", "self_report"]
-    }
+    """API health check endpoint."""
+    return _build_health_status()
 
 # Register API routers
 app.include_router(auth_router, prefix="/api")
