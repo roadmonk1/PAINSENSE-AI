@@ -2,6 +2,13 @@
 
 ### Multimodal Pain Detection, Sign-Language Communication & Healthcare Assistance System
 
+> **TYSIC 2026 — Tata Young Social Innovator Challenge | Health Sector**  
+> **Problem:** "How can rural families manage post-discharge care when hospital follow-ups require long travel?"  
+> **Solution:** Accessible AI-assisted remote post-discharge pain and symptom communication system.
+>
+> ⚠️ PainSense AI is a **communication and documentation aid**. It does NOT diagnose, treat, or replace healthcare professionals.  
+> All demo data is clearly labelled as simulated.
+
 [![Build Status](https://img.shields.io/badge/Build-Passing-brightgreen.svg)]()
 [![Python](https://img.shields.io/badge/Python-3.11-blue.svg)]()
 [![FastAPI](https://img.shields.io/badge/FastAPI-1.2.0--Enterprise-009688.svg)]()
@@ -10,7 +17,11 @@
 [![FHIR](https://img.shields.io/badge/Interoperability-HL7%20FHIR%20R4-blueviolet.svg)]()
 [![Tests](https://img.shields.io/badge/Tests-23%20Passed-success.svg)]()
 
+**See [DEMO.md](./DEMO.md) for the full 3–5 minute TYSIC demo walkthrough.**
+
 ---
+
+
 
 # QUICK START — WINDOWS WITHOUT DOCKER
 

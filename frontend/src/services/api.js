@@ -235,3 +235,59 @@ export async function exportUserData() {
   });
   return res.json();
 }
+
+// ----------------------------------------------------
+// Post-Discharge Care (TYSIC 2026)
+// ----------------------------------------------------
+
+export async function createPostDischargeCase(data) {
+  const res = await fetch(`${API_BASE}/post-discharge/cases`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Failed to submit case.');
+  }
+  return res.json();
+}
+
+export async function getPatientPostDischargeCases() {
+  const res = await fetch(`${API_BASE}/post-discharge/cases`, {
+    headers: getHeaders()
+  });
+  return res.json();
+}
+
+export async function getPostDischargeCase(caseId) {
+  const res = await fetch(`${API_BASE}/post-discharge/cases/${caseId}`, {
+    headers: getHeaders()
+  });
+  return res.json();
+}
+
+export async function getPostDischargeCaseReportData(caseId) {
+  const res = await fetch(`${API_BASE}/post-discharge/cases/${caseId}/report-data`, {
+    headers: getHeaders()
+  });
+  return res.json();
+}
+
+export async function getAllPostDischargeCasesForDoctor() {
+  const res = await fetch(`${API_BASE}/post-discharge/doctor/all-cases`, {
+    headers: getHeaders()
+  });
+  return res.json();
+}
+
+export async function updateCaseStatus(caseId, status, clinicalNotes = null) {
+  const params = new URLSearchParams({ status });
+  if (clinicalNotes) params.append('clinical_notes', clinicalNotes);
+  const res = await fetch(
+    `${API_BASE}/post-discharge/doctor/cases/${caseId}/status?${params.toString()}`,
+    { method: 'PUT', headers: getHeaders() }
+  );
+  return res.json();
+}
+

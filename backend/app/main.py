@@ -9,7 +9,8 @@ from backend.app.config import settings
 from backend.app.database import init_db, SessionLocal
 from backend.app.models.entities import (
     User, Assessment, TimelineEvent, ConsentRecord,
-    CaregiverAlertRecord, PainReport, AIObservation, CaregiverPatientLink
+    CaregiverAlertRecord, PainReport, AIObservation, CaregiverPatientLink,
+    PostDischargeCase
 )
 from backend.app.auth.security import get_password_hash
 
@@ -25,6 +26,7 @@ from backend.app.api.doctor import router as doctor_router
 from backend.app.api.caregiver import router as caregiver_router
 from backend.app.api.safety import router as safety_router
 from backend.app.api.privacy import router as privacy_router
+from backend.app.api.post_discharge import router as post_discharge_router
 
 def seed_demo_data():
     db = SessionLocal()
@@ -132,6 +134,87 @@ def seed_demo_data():
                 permissions_json=json.dumps(["view_timeline", "receive_alerts", "request_call"])
             )
             db.add_all([e1, e2, alert, caregiver_link])
+            db.commit()
+
+            # ── TYSIC 2026 Demo Post-Discharge Cases ──────────────────────────
+            # These are clearly labelled SIMULATED / DEMO cases for demonstration.
+            # They do NOT represent real patients, real hospitals, or clinical outcomes.
+
+            t3 = now - datetime.timedelta(days=2)
+            t4 = now - datetime.timedelta(days=4)
+
+            case1 = PostDischargeCase(
+                case_ref="PS-1001",
+                user_id=patient.id,
+                status="pending_review",
+                discharge_date=(now - datetime.timedelta(days=3)).strftime("%d %b %Y"),
+                discharge_hospital="[Demo] District General Hospital",
+                discharge_reason="Post-operative recovery — lumbar procedure",
+                pain_location="Lower Back",
+                severity_score=7,
+                pain_type="Aching",
+                pain_duration="About 2 hours",
+                symptoms_json=json.dumps(["Stiffness", "Mild swelling", "Difficulty standing"]),
+                changes_since_discharge=(
+                    "Pain feels worse than yesterday. Had difficulty walking to the kitchen this morning. "
+                    "The stiffness is increasing."
+                ),
+                patient_notes="I've been resting as instructed but the pain is getting worse, not better.",
+                caregiver_notes="Alex has been resting all day. Appears to be in visible discomfort when moving.",
+                communication_methods="Self-Report (Text), Caregiver Observation",
+                ai_observations_json=json.dumps([
+                    "Mild postural guarding observed during movement (non-diagnostic, supportive only)",
+                    "Voice note indicated reduced confidence in mobility",
+                ]),
+                ai_observation_note="AI observations are supportive context only and do not constitute a clinical finding.",
+                is_demo=True,
+                created_at=t3,
+            )
+
+            case2 = PostDischargeCase(
+                case_ref="PS-1002",
+                user_id=patient.id,
+                status="reviewed",
+                discharge_date=(now - datetime.timedelta(days=5)).strftime("%d %b %Y"),
+                discharge_hospital="[Demo] District General Hospital",
+                discharge_reason="Abdominal procedure — routine post-op care",
+                pain_location="Stomach / Abdomen",
+                severity_score=4,
+                pain_type="Dull",
+                pain_duration="Comes and goes",
+                symptoms_json=json.dumps(["Mild nausea", "Reduced appetite"]),
+                changes_since_discharge="Symptoms are about the same as yesterday. Not getting worse.",
+                patient_notes="Eating small amounts. Pain is manageable.",
+                caregiver_notes="Patient seems stable. Taking prescribed medication on schedule.",
+                communication_methods="Self-Report (Text)",
+                ai_observations_json=json.dumps([]),
+                ai_observation_note="No AI-assisted observation data recorded for this session.",
+                is_demo=True,
+                created_at=t4,
+            )
+
+            db.add_all([case1, case2])
+
+            # Timeline events for demo cases
+            te3 = TimelineEvent(
+                user_id=patient.id,
+                event_type="post_discharge_case",
+                title="Post-Discharge Report — Lower Back (7/10) [DEMO]",
+                description="PS-1001: Increasing discomfort. Difficulty walking. Caregiver notes visible pain on movement.",
+                severity="moderate",
+                modality="Self-Report, Caregiver",
+                timestamp=t3,
+            )
+            te4 = TimelineEvent(
+                user_id=patient.id,
+                event_type="post_discharge_case",
+                title="Post-Discharge Report — Abdomen (4/10) [DEMO]",
+                description="PS-1002: Stable mild abdominal discomfort. Patient managing symptoms.",
+                severity="mild",
+                modality="Self-Report",
+                timestamp=t4,
+            )
+            db.add_all([te3, te4])
             db.commit()
     finally:
         db.close()
@@ -250,3 +333,4 @@ app.include_router(doctor_router, prefix="/api")
 app.include_router(caregiver_router, prefix="/api")
 app.include_router(safety_router, prefix="/api")
 app.include_router(privacy_router, prefix="/api")
+app.include_router(post_discharge_router, prefix="/api")

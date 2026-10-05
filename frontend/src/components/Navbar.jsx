@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
   Activity, Camera, Mic, Hand, Clock, HeartHandshake, Stethoscope, 
-  Settings, AlertTriangle, Eye, ShieldAlert, PhoneCall, Menu, X, LogIn, LogOut, UserCheck
+  Settings, AlertTriangle, Eye, ShieldAlert, PhoneCall, Menu, X, LogIn, LogOut, UserCheck,
+  ClipboardList, LayoutDashboard
 } from 'lucide-react';
 import { logoutUser } from '../services/api';
 
@@ -12,7 +13,11 @@ export default function Navbar({ highContrast, setHighContrast, currentRole, set
 
   const navLinks = [
     { to: "/dashboard", label: "Dashboard", icon: Activity },
-    { to: "/assess", label: "Assess Pain", icon: AlertTriangle, highlight: true },
+    // TYSIC 2026 primary workflow
+    { to: "/post-discharge", label: "Post-Discharge Care", icon: ClipboardList, highlight: true },
+    { to: "/healthcare", label: "Healthcare Portal", icon: LayoutDashboard },
+    // Modality channels
+    { to: "/assess", label: "Assess Pain", icon: AlertTriangle },
     { to: "/camera", label: "Camera", icon: Camera },
     { to: "/voice", label: "Voice", icon: Mic },
     { to: "/sign-language", label: "Sign Language", icon: Hand },
@@ -22,6 +27,7 @@ export default function Navbar({ highContrast, setHighContrast, currentRole, set
     { to: "/limitations", label: "AI Boundaries", icon: ShieldAlert },
     { to: "/settings", label: "Settings", icon: Settings },
   ];
+
 
   return (
     <header className="bg-slate-900 text-white sticky top-0 z-50 shadow-md border-b border-slate-800">

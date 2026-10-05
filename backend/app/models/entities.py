@@ -6,6 +6,51 @@ from sqlalchemy.orm import declarative_base, relationship
 
 Base = declarative_base()
 
+
+class PostDischargeCase(Base):
+    """
+    TYSIC 2026 — Post-Discharge Care Case.
+    Captures a structured communication record for rural post-discharge follow-up.
+    This is a COMMUNICATION and DOCUMENTATION record, NOT a medical diagnosis.
+    """
+    __tablename__ = "post_discharge_cases"
+
+    id = Column(Integer, primary_key=True, index=True)
+    case_ref = Column(String(20), unique=True, index=True, nullable=False)  # e.g. PS-1001
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    status = Column(String(50), default="pending_review")  # pending_review, reviewed, actioned
+
+    # Post-discharge context
+    discharge_date = Column(String(50), nullable=True)
+    discharge_hospital = Column(String(255), nullable=True)
+    discharge_reason = Column(Text, nullable=True)
+
+    # Patient-reported pain information (PRIMARY)
+    pain_location = Column(String(100), default="Unspecified")
+    severity_score = Column(Integer, default=0)  # 0-10 patient reported
+    pain_type = Column(String(50), default="Unspecified")
+    pain_duration = Column(String(100), default="Unspecified")
+    symptoms_json = Column(Text, default="[]")
+    changes_since_discharge = Column(Text, nullable=True)  # patient's own words
+    patient_notes = Column(Text, nullable=True)  # free text
+    caregiver_notes = Column(Text, nullable=True)
+
+    # Communication method used
+    communication_methods = Column(String(255), default="Self-Report (Text)")
+
+    # AI-assisted observations (CLEARLY LABELED as supportive, non-diagnostic)
+    ai_observations_json = Column(Text, default="[]")
+    ai_observation_note = Column(Text, nullable=True)
+
+    # Assessment link (optional — links to existing assessment if one was run)
+    assessment_id = Column(Integer, ForeignKey("assessments.id"), nullable=True)
+
+    # Demo flag
+    is_demo = Column(Boolean, default=False)
+
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow)
+
 class User(Base):
     __tablename__ = "users"
 
